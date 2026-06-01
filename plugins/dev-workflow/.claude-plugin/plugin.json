@@ -1,0 +1,6 @@
+{
+  "name": "dev-workflow",
+  "description": "기능 개발 라이프사이클 오케스트레이션(feature-workflow), 하네스 생성기(harness), codex 연동 스펙/코드 리뷰, 파일 기반 플래닝, 이슈 등록·마무리 유틸을 묶은 프로젝트 비종속 개발 워크플로우 플러그인.",
+  "version": "0.1.0",
+  "author": { "name": "geonyeop123", "email": "dlrjsduq33@gmail.com" }
+}
