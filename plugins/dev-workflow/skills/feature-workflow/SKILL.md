@@ -27,12 +27,13 @@ digraph feature_workflow {
     s3 [label="③ 사용자 논의/합의\n(AskUserQuestion)"];
     s4 [label="④ 스펙 문서 작성\n(worktree 안의 docs/superpowers/specs/)"];
     s5 [label="⑤ 구현 문서(plan) 작성\n(worktree 안의 docs/superpowers/plans/)"];
-    s6 [label="⑥ 스펙 리뷰\ncodex-spec-review"];
-    s7 [label="⑦ 사용자 리뷰\n(문서 공유 + 승인 대기)"];
-    s8 [label="⑧ 구현\nsuperpowers:subagent-driven-development\n(--engine codex 시 codex-subagent-driven-development)"];
-    s9 [label="⑨ 코드 리뷰\ncodex-code-review"];
-    s10 [label="⑩ 최종 사용자 확인\n(결과 요약 + 승인 대기)"];
-    s11 [label="⑪ 마무리\n⑪-a 프로젝트 문서 최신화\n⑪-b finalize (커밋 + MR)"];
+    s6 [label="⑥ DoD 확정\ndefinition-of-done"];
+    s7 [label="⑦ 스펙 리뷰\ncodex-spec-review (spec+plan+DoD)"];
+    s8 [label="⑧ 사용자 리뷰\n(문서 공유 + 승인 대기)"];
+    s9 [label="⑨ 구현\nsuperpowers:subagent-driven-development\n(--engine codex 시 codex-subagent-driven-development)"];
+    s10 [label="⑩ 코드 리뷰\ncodex-code-review"];
+    s11 [label="⑪ 최종 사용자 확인\n(결과 요약 + 승인 대기)"];
+    s12 [label="⑫ 마무리\n⑫-a 프로젝트 문서 최신화\n⑫-b finalize (커밋 + MR)"];
     done [label="완료" shape=doublecircle];
 
     start -> skip;
@@ -47,21 +48,22 @@ digraph feature_workflow {
     s8 -> s9;
     s9 -> s10;
     s10 -> s11;
-    s11 -> done;
+    s11 -> s12;
+    s12 -> done;
 }
 ```
 
 ## 스킵 규칙
 
 - **기본값:** 모든 단계 수행 (스킵 없음)
-- **스킵 허용 조건:** 사용자가 `/feature-workflow --skip 2,6` 또는 대화 중 "브레인스토밍은 건너뛰자" 등 명시적으로 요청한 경우만
-- **스킵 불가 단계:** ① 브랜치+worktree 생성, ⑪ finalize (이 두 단계는 항상 수행)
+- **스킵 허용 조건:** 사용자가 `/feature-workflow --skip 2,7` 또는 대화 중 "브레인스토밍은 건너뛰자" 등 명시적으로 요청한 경우만
+- **스킵 불가 단계:** ① 브랜치+worktree 생성, ⑫ finalize (이 두 단계는 항상 수행)
 
 | 스킵 시나리오 | 권장 스킵 |
 |-------------|----------|
-| 간단한 버그픽스 (원인 명확) | ②③④⑤⑥⑦ 스킵 가능 |
+| 간단한 버그픽스 (원인 명확) | ②③④⑤⑥⑦⑧ 스킵 가능 |
 | 이미 스펙이 존재 | ②③④ 스킵 가능 (단, 기존 spec/plan을 worktree로 옮겨 진행) |
-| Codex 없이 직접 구현 | ⑥⑨ 스킵 (대신 superpowers 리뷰 사용) |
+| Codex 없이 직접 구현 | ⑦⑩ 스킵 (대신 superpowers 리뷰 사용) |
 
 ## 옵션
 
@@ -71,7 +73,7 @@ digraph feature_workflow {
 |------|------|--------|
 | `--base <branch>` | 베이스 브랜치 (피처 브랜치를 따낼 기준) | `dev` |
 | `--engine <codex|>` | 구현 엔진 — `codex` 지정 시 `codex-subagent-driven-development`, 미지정 시 `superpowers:subagent-driven-development` | (미지정) |
-| `--skip <단계번호,...>` | 스킵할 단계 번호 (① 과 ⑪ 은 스킵 불가) | (없음) |
+| `--skip <단계번호,...>` | 스킵할 단계 번호 (① 과 ⑫ 은 스킵 불가) | (없음) |
 
 자연어 예시: "이번엔 main에서 분기해줘" → `--base main`. "구현은 codex로" → `--engine codex`. "브레인스토밍은 건너뛰자" → `--skip 2`.
 
@@ -84,12 +86,13 @@ digraph feature_workflow {
 | 사전 탐색 (broad 검색) | `Explore` 서브에이전트 | Haiku | fan-out 검색, 결과만 회수 |
 | 사전 탐색 (영향범위·의존성) | `analyzer` 서브에이전트 | Sonnet | 패턴·의존성 추적 분석 |
 | ④ 스펙 / ⑤ plan 작성 | 메인 세션 | Opus 권장 | 지능 front-load → 구현 단순화 |
-| ⑥ 스펙 리뷰 | `codex-spec-review` | codex(GPT) | 외부 관점 |
-| ⑧ 구현 (task별) | `subagent-driven-development` | **Sonnet 기본** | 정밀 plan = 명세 실행 |
-| ⑧ escalate → Opus | 동시성/레이스 · 보안·금전 정확성 · 숨은결합 리팩토링 · plan 모호 | **Opus** | silent bug 비용 > 모델 가격차(1.67x) |
-| ⑨ 코드 리뷰 | `codex-code-review` (+ Opus 교차) | codex + Opus | 강한 리뷰로 Sonnet 미스 보강 |
-| ⑪-a 설계 문서 | `general-purpose` | Sonnet | 설계 판단 |
-| ⑪-a 기계 문서 | `general-purpose` | Haiku | 기계적 갱신 |
+| ⑥ DoD 확정 | `definition-of-done` | Opus 권장 | 완료 계약은 판단 — spec·plan 근거로 검증 가능 조건 확정 |
+| ⑦ 스펙·플랜·DoD 리뷰 | `codex-spec-review` | codex(GPT) | 외부 관점 |
+| ⑨ 구현 (task별) | `subagent-driven-development` | **Sonnet 기본** | 정밀 plan = 명세 실행 |
+| ⑨ escalate → Opus | 동시성/레이스 · 보안·금전 정확성 · 숨은결합 리팩토링 · plan 모호 | **Opus** | silent bug 비용 > 모델 가격차(1.67x) |
+| ⑩ 코드 리뷰 | `codex-code-review` (+ Opus 교차) | codex + Opus | 강한 리뷰로 Sonnet 미스 보강 |
+| ⑫-a 설계 문서 | `general-purpose` | Sonnet | 설계 판단 |
+| ⑫-a 기계 문서 | `general-purpose` | Haiku | 기계적 갱신 |
 
 - 위 모델은 **권장 기본값**이다. 비용·가용성·태스크 난이도에 따라 override 가능 (`--engine`, 자연어 지정).
 - **사전 탐색 위임 원칙:** 코드베이스를 메인 세션에서 직접 광범위하게 읽지 말고 `Explore`/`analyzer` 서브에이전트에 위임해 distilled 결과만 받는다 (메인 세션 오염 방지 → context rot 회피). 단, 원인이 명확한 소규모 버그픽스는 오버헤드가 더 크므로 메인 세션에서 직접 탐색해도 된다.
@@ -137,7 +140,7 @@ cd "$WORKTREE_DIR"
 
 - 이후 모든 명령은 `$WORKTREE_DIR` 안에서 실행한다.
 - worktree 위치를 `.worktrees/` 외 다른 경로로 두고 싶으면 사용자가 명시한 경로를 사용한다.
-- worktree 정리는 ⑪ MR 머지 이후에만 수행한다 (`git worktree remove .worktrees/{branch-name-dashed}`).
+- worktree 정리는 ⑫ MR 머지 이후에만 수행한다 (`git worktree remove .worktrees/{branch-name-dashed}`).
 
 #### ①-4. 첫 커밋(빈 커밋) — 선택
 
@@ -174,21 +177,29 @@ cd "$WORKTREE_DIR"
 - 각 태스크는 파일 경로 / 정확한 코드 / 명령 / 예상 결과를 포함한다 (placeholder 금지)
 - **격리 원칙:** 이 문서도 처음부터 worktree 안에 만든다.
 
-### ⑥ 스펙 리뷰
+### ⑥ DoD 확정
+
+**스킬:** `definition-of-done` 호출 (worktree 안에서)
+
+- 합의된 스펙(④)·플랜(⑤)을 입력으로 "무엇을 충족하면 완료인가"를 **검증 가능한 계약**으로 확정한다 — 인상이 아니라 **명령 exit code**로 판정 가능한 조건.
+- 각 완료 조건은 실행 가능한 검증 명령(테스트/빌드/lint 등)과 기대 결과를 명시한다.
+- 산출물은 worktree 안에 남긴다 (플랜 문서에 편입하거나 `docs/superpowers/plans/` 인근). 이 DoD가 **⑨ 구현 완료 판정**과 **⑪ 최종 확인**의 근거가 된다.
+
+### ⑦ 스펙 리뷰
 
 **스킬:** `codex-spec-review` 호출
 
-- 스펙 + 플랜 두 문서를 함께 리뷰
+- 스펙 + 플랜 + **DoD** 세 문서를 함께 리뷰한다 (DoD가 스펙·플랜과 정합하고, 완료 조건이 검증 가능·충분한지 포함).
 - ACCEPT/REBUT 루프 완료 후 문서 업데이트
 - MAINTAINED 이슈는 Claude가 최종 결정하며, 사용자 합의 스코프를 변경하는 결정이라면 사용자 review에 명시 보고
 
-### ⑦ 사용자 리뷰
+### ⑧ 사용자 리뷰
 
 - 최종 스펙·플랜 문서를 사용자에게 공유
 - AskUserQuestion으로 승인 대기
 - 수정 요청 시 문서 수정 후 재확인
 
-### ⑧ 구현
+### ⑨ 구현
 
 **기본 스킬:** `superpowers:subagent-driven-development`
 **`--engine codex` 또는 "구현은 codex로" 명시 시:** `codex-subagent-driven-development`
@@ -199,22 +210,22 @@ cd "$WORKTREE_DIR"
 - **모델:** `단계별 위임 모델` 표 참조 — **Sonnet 기본**, escalate 조건(동시성/레이스·보안·금전 정확성·숨은결합 리팩토링·plan 모호) 해당 시 **Opus**
 - 모든 작업은 worktree 디렉터리 안에서 수행
 
-### ⑨ 코드 리뷰
+### ⑩ 코드 리뷰
 
 **스킬:** `codex-code-review` 호출
 
 - 브랜치 전체 diff 대상 (`--scope branch --base {base-branch}`)
 - 지적 사항 반영 후 빌드·테스트 확인
 
-### ⑩ 최종 사용자 확인
+### ⑪ 최종 사용자 확인
 
 - 구현 결과 요약 제시 (변경 파일, 테스트 결과, 주요 결정 사항)
 - AskUserQuestion으로 최종 승인
 - 추가 수정 요청 시 반영 후 재확인
 
-### ⑪ 마무리 (스킵 불가)
+### ⑫ 마무리 (스킵 불가)
 
-#### ⑪-a. 프로젝트 문서 최신화
+#### ⑫-a. 프로젝트 문서 최신화
 
 `finalize` 호출 **전에** tech-docs 에이전트 두 개를 **순차 실행**한다. 설계 판단이 필요한 갱신은 Sonnet, 기계적 갱신은 Haiku에 위임한다.
 
@@ -268,11 +279,11 @@ Agent(
 1. 플랜 문서의 태스크 체크박스를 모두 완료(`[x]`) 처리한다
 2. 스펙 문서에 구현 중 변경된 사항(API 시그니처, 예외 케이스 등)을 반영한다
 
-#### ⑪-b. finalize
+#### ⑫-b. finalize
 
 **스킬:** `finalize` 호출
 
-- ⑪-a에서 최신화한 문서를 포함하여 커밋
+- ⑫-a에서 최신화한 문서를 포함하여 커밋
 - MR 생성 (target: `{base-branch}`, 기본값 `dev`)
 
 ##### 이슈 자동 close 규칙 (필수)
@@ -288,7 +299,7 @@ Agent(
 
 **금지:**
 - "Refs #N" / "Related #N" 같은 약한 표현으로 대체하지 않는다 — close 키워드를 명시.
-- ⑪-a 문서 갱신 + 검증 검토 모두 통과한 상태에서만 MR을 만든다. 미완 작업이 남아있다면 close 키워드 보류하고 Draft MR.
+- ⑫-a 문서 갱신 + 검증 검토 모두 통과한 상태에서만 MR을 만든다. 미완 작업이 남아있다면 close 키워드 보류하고 Draft MR.
 
 **적용 위치:** MR description의 `## Summary` 위 또는 첫 줄. finalize 스킬 호출 시 `glab mr create --description` / `gh pr create --body` 본문 최상단에 삽입.
 
@@ -306,7 +317,7 @@ Closes #81
 
 1. **현재 단계 산출물이 존재하는가?** (worktree, 문서, 코드, 커밋 등)
 2. **다음 단계가 스킵 대상인가?** → 스킵이면 그 다음 단계로 이동
-3. **사용자 확인이 필요한 단계인가?** (③⑦⑩) → 승인 없이 진행 금지
+3. **사용자 확인이 필요한 단계인가?** (③⑧⑪) → 승인 없이 진행 금지
 4. **현재 작업 디렉터리가 worktree인가?** → ① 이후 모든 단계는 worktree 안에서 수행. 베이스 브랜치 작업 트리에서 진행 중이라면 즉시 `cd $WORKTREE_DIR`.
 
 ## Red Flags
@@ -316,12 +327,12 @@ Closes #81
 | ① 단계 없이 ② 브레인스토밍부터 진행 | ① 베이스 브랜치 동기화 + worktree 생성을 먼저 수행. spec/plan 작성 시점에 베이스 트리가 더럽혀지는 것을 막기 위해 ①은 항상 가장 먼저. |
 | 베이스 브랜치 작업 트리에 spec/plan 문서가 만들어짐 | 잘못된 작업 디렉터리. 즉시 worktree로 이동하고, untracked 문서는 worktree로 `mv` 후 첫 커밋에 포함. |
 | `git pull --ff-only` 실패 | 베이스 브랜치가 로컬에서 분기. 사용자에게 보고하고 합의 후 처리 (rebase 또는 reset). 임의로 `--force` 또는 reset 금지. |
-| 사용자 승인 없이 다음 단계 진행 | ③⑦⑩은 반드시 승인 후 진행 |
+| 사용자 승인 없이 다음 단계 진행 | ③⑧⑪은 반드시 승인 후 진행 |
 | 스킵 요청 없이 단계 건너뜀 | 모든 단계 수행이 기본값 |
 | 베이스 브랜치(`dev`)에서 직접 커밋 | 절대 금지. 항상 ① 단계로 worktree+피처 브랜치 만들고 그 안에서 커밋. |
 | MR 머지 전 worktree 삭제 | 머지 + 원격 브랜치 정리 후에만 `git worktree remove` 실행 |
 | 스펙 없이 구현 시작 | ④⑤ 완료 후 구현 |
-| finalize 없이 작업 종료 | ⑪은 항상 수행 |
-| 문서 최신화 없이 finalize 실행 | ⑪-a 점검 후 ⑪-b finalize 진행 |
+| finalize 없이 작업 종료 | ⑫은 항상 수행 |
+| 문서 최신화 없이 finalize 실행 | ⑫-a 점검 후 ⑫-b finalize 진행 |
 | 다이어그램/스펙이 구현과 불일치 | 구현 기준으로 문서를 먼저 업데이트 |
-| 이슈 컨텍스트로 시작했는데 MR/PR에 `Closes #N` 누락 | 즉시 description 수정. 약한 표현(`Refs`, `Related`)으로 대체 금지. ⑪-b 항상 close 키워드 포함. |
+| 이슈 컨텍스트로 시작했는데 MR/PR에 `Closes #N` 누락 | 즉시 description 수정. 약한 표현(`Refs`, `Related`)으로 대체 금지. ⑫-b 항상 close 키워드 포함. |
