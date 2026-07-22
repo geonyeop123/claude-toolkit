@@ -12,6 +12,16 @@ description: Use when starting any new feature, bugfix, or refactor task that pr
 
 **기본 격리 원칙:** 베이스 브랜치 동기화와 worktree+브랜치 생성을 **가장 먼저** 수행하고, 이후의 모든 작업(브레인스토밍 메모, spec/plan 문서, codex 리뷰 산출물, 구현 코드, finalize)은 worktree 디렉터리 안에서만 진행한다. 베이스 브랜치 작업 트리는 처음부터 끝까지 untouched 상태를 유지한다.
 
+**문서 배치 규약:** 이 워크플로가 만드는 산출 문서(스펙·플랜·DoD)는 모두 **`docs/work/{slug}/` 한 디렉터리에 모은다.**
+
+| 문서 | 경로 |
+|------|------|
+| ④ 스펙 | `docs/work/{slug}/design.md` |
+| ⑤ 플랜 | `docs/work/{slug}/plan.md` |
+| ⑥ DoD | `docs/work/{slug}/dod.md` (definition-of-done 스킬 기본 경로 `docs/dod/` 대신 이 경로 사용) |
+
+`{slug}`는 ① 단계의 브랜치 슬러그와 동일하게 맞춘다 (예: `feat/issue-40-foo` → `docs/work/issue-40-foo/`).
+
 ## 전체 프로세스
 
 ```dot
@@ -25,8 +35,8 @@ digraph feature_workflow {
     s1 [label="① 베이스 브랜치 동기화 + 브랜치/worktree 생성\n(스킵 불가, 항상 가장 먼저)"];
     s2 [label="② 브레인스토밍\nsuperpowers:brainstorming"];
     s3 [label="③ 사용자 논의/합의\n(AskUserQuestion)"];
-    s4 [label="④ 스펙 문서 작성\n(worktree 안의 docs/superpowers/specs/)"];
-    s5 [label="⑤ 구현 문서(plan) 작성\n(worktree 안의 docs/superpowers/plans/)"];
+    s4 [label="④ 스펙 문서 작성\n(docs/work/{slug}/design.md)"];
+    s5 [label="⑤ 구현 문서(plan) 작성\n(docs/work/{slug}/plan.md)"];
     s6 [label="⑥ DoD 확정\ndefinition-of-done"];
     s7 [label="⑦ 스펙 리뷰\ncodex-spec-review (spec+plan+DoD)"];
     s8 [label="⑧ 사용자 리뷰\n(문서 공유 + 승인 대기)"];
@@ -163,7 +173,7 @@ cd "$WORKTREE_DIR"
 
 ### ④ 스펙 문서 작성
 
-- `docs/superpowers/specs/YYYY-MM-DD-{slug}-design.md` 경로에 스펙 문서 생성 (worktree 안)
+- `docs/work/{slug}/design.md` 경로에 스펙 문서 생성 (worktree 안)
 - 브레인스토밍 합의 사항 반영
 - 작성 후 self-review (placeholder/contradictions/scope/ambiguity 점검) — 필요한 경우 `superpowers:writing-plans` 스킬을 호출하면 spec → plan 일관 검토 가이드를 활용할 수 있음
 - **격리 원칙:** 이 문서는 처음부터 worktree 안의 경로에 만들어진다. 베이스 브랜치 작업 트리에는 절대 만들지 않는다.
@@ -172,7 +182,7 @@ cd "$WORKTREE_DIR"
 
 **스킬:** `superpowers:writing-plans` 호출 (worktree 안에서)
 
-- `docs/superpowers/plans/YYYY-MM-DD-{slug}.md` 경로에 plan 문서 생성 (worktree 안)
+- `docs/work/{slug}/plan.md` 경로에 plan 문서 생성 (worktree 안)
 - 태스크 단위로 분해 (subagent-driven-development가 소비할 형태)
 - 각 태스크는 파일 경로 / 정확한 코드 / 명령 / 예상 결과를 포함한다 (placeholder 금지)
 - **격리 원칙:** 이 문서도 처음부터 worktree 안에 만든다.
@@ -183,7 +193,7 @@ cd "$WORKTREE_DIR"
 
 - 합의된 스펙(④)·플랜(⑤)을 입력으로 "무엇을 충족하면 완료인가"를 **검증 가능한 계약**으로 확정한다 — 인상이 아니라 **명령 exit code**로 판정 가능한 조건.
 - 각 완료 조건은 실행 가능한 검증 명령(테스트/빌드/lint 등)과 기대 결과를 명시한다.
-- 산출물은 worktree 안에 남긴다 (플랜 문서에 편입하거나 `docs/superpowers/plans/` 인근). 이 DoD가 **⑨ 구현 완료 판정**과 **⑪ 최종 확인**의 근거가 된다.
+- 산출물은 `docs/work/{slug}/dod.md`에 남긴다 (definition-of-done 스킬 기본 경로 `docs/dod/` 대신). 이 DoD가 **⑨ 구현 완료 판정**과 **⑪ 최종 확인**의 근거가 된다.
 
 ### ⑦ 스펙 리뷰
 
