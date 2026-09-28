@@ -10,7 +10,7 @@ description: Use when starting any new feature, bugfix, or refactor task that pr
 기능 개발의 전체 라이프사이클을 단계별로 오케스트레이션한다.
 **핵심 원칙:** 사용자가 명시적으로 스킵을 요청하지 않는 한, 모든 단계를 반드시 수행한다.
 
-**기본 격리 원칙:** 베이스 브랜치 동기화와 worktree+브랜치 생성을 **가장 먼저** 수행하고, 이후의 모든 작업(브레인스토밍 메모, spec/plan 문서, codex 리뷰 산출물, 구현 코드, finalize)은 worktree 디렉터리 안에서만 진행한다. 베이스 브랜치 작업 트리는 처음부터 끝까지 untouched 상태를 유지한다.
+**기본 격리 원칙:** 베이스 브랜치 동기화와 worktree+브랜치 생성을 **가장 먼저** 수행하고, 이후의 모든 작업(브레인스토밍 메모, spec/plan 문서, codex 리뷰 산출물, 구현 코드, MR 제출)은 worktree 디렉터리 안에서만 진행한다. 베이스 브랜치 작업 트리는 처음부터 끝까지 untouched 상태를 유지한다.
 
 **문서 배치 규약:** 이 워크플로가 만드는 산출 문서(스펙·플랜·DoD)는 모두 **`docs/work/{slug}/` 한 디렉터리에 모은다.**
 
@@ -43,7 +43,7 @@ digraph feature_workflow {
     s9 [label="⑨ 구현\nsuperpowers:subagent-driven-development\n(--engine codex 시 codex-subagent-driven-development)"];
     s10 [label="⑩ 코드 리뷰\ncodex-code-review"];
     s11 [label="⑪ 최종 사용자 확인\n(결과 요약 + 승인 대기)"];
-    s12 [label="⑫ 마무리\n⑫-a 프로젝트 문서 최신화\n⑫-b finalize (커밋 + MR)"];
+    s12 [label="⑫ 마무리\n⑫-a 프로젝트 문서 최신화\n⑫-b submit-mr (dev 선병합 + 커밋 + MR)"];
     done [label="완료" shape=doublecircle];
 
     start -> skip;
@@ -67,7 +67,7 @@ digraph feature_workflow {
 
 - **기본값:** 모든 단계 수행 (스킵 없음)
 - **스킵 허용 조건:** 사용자가 `/feature-workflow --skip 2,7` 또는 대화 중 "브레인스토밍은 건너뛰자" 등 명시적으로 요청한 경우만
-- **스킵 불가 단계:** ① 브랜치+worktree 생성, ⑫ finalize (이 두 단계는 항상 수행)
+- **스킵 불가 단계:** ① 브랜치+worktree 생성, ⑫ 마무리 (이 두 단계는 항상 수행)
 
 | 스킵 시나리오 | 권장 스킵 |
 |-------------|----------|
@@ -111,7 +111,7 @@ digraph feature_workflow {
 
 ### ① 베이스 브랜치 동기화 + 브랜치/worktree 생성 (스킵 불가, 항상 가장 먼저)
 
-**이 단계는 모든 작업의 출발점이다.** 브레인스토밍·spec/plan 작성·codex 리뷰·구현·finalize 모두 worktree 안에서 수행되어야 베이스 브랜치(dev) 작업 트리를 더럽히지 않고 작업이 격리된다.
+**이 단계는 모든 작업의 출발점이다.** 브레인스토밍·spec/plan 작성·codex 리뷰·구현·MR 제출 모두 worktree 안에서 수행되어야 베이스 브랜치(dev) 작업 트리를 더럽히지 않고 작업이 격리된다.
 
 **ⓘ 스킬(권장):** `superpowers:using-git-worktrees` 호출로 안전 점검과 디렉터리 결정을 위임한다. 스킬을 사용하지 않을 때는 아래 절차를 직접 수행한다.
 
@@ -237,7 +237,7 @@ cd "$WORKTREE_DIR"
 
 #### ⑫-a. 프로젝트 문서 최신화
 
-`finalize` 호출 **전에** tech-docs 에이전트 두 개를 **순차 실행**한다. 설계 판단이 필요한 갱신은 Sonnet, 기계적 갱신은 Haiku에 위임한다.
+⑫-b 호출 **전에** tech-docs 에이전트 두 개를 **순차 실행**한다. 설계 판단이 필요한 갱신은 Sonnet, 기계적 갱신은 Haiku에 위임한다.
 
 **1) 설계성 문서 갱신 (Sonnet)**
 
@@ -289,12 +289,17 @@ Agent(
 1. 플랜 문서의 태스크 체크박스를 모두 완료(`[x]`) 처리한다
 2. 스펙 문서에 구현 중 변경된 사항(API 시그니처, 예외 케이스 등)을 반영한다
 
-#### ⑫-b. finalize
+#### ⑫-b. MR 제출 — `submit-mr`
 
-**스킬:** `finalize` 호출
+**스킬:** 프로젝트에 `.claude/skills/submit-mr/SKILL.md` 가 있으면 **그 스킬**, 없으면 이 플러그인의
+`dev-workflow:submit-mr` 를 호출한다. 프로젝트 스킬이 그 저장소의 게이트·파생 파일·문서 규약을 알기 때문이다.
 
 - ⑫-a에서 최신화한 문서를 포함하여 커밋
-- MR 생성 (target: `{base-branch}`, 기본값 `dev`)
+- **MR 을 만들기 전에 `origin/{base-branch}` 를 로컬에서 병합**하고 충돌·파생 파일·마이그레이션 번호를 해소한 뒤
+  게이트를 다시 돌린다 — MR 을 올린 뒤에 충돌을 알면 매번 한 번은 핑퐁이 생긴다
+- push → MR/PR 생성 (target: `{base-branch}`, 기본값 `dev`) → 머지 가능 여부 확인
+
+`finalize` 는 단독 유틸로 남는다. 이 워크플로의 ⑫-b 에서는 선병합이 없는 `finalize` 로 MR 을 만들지 않는다.
 
 ##### 이슈 자동 close 규칙 (필수)
 
@@ -311,7 +316,7 @@ Agent(
 - "Refs #N" / "Related #N" 같은 약한 표현으로 대체하지 않는다 — close 키워드를 명시.
 - ⑫-a 문서 갱신 + 검증 검토 모두 통과한 상태에서만 MR을 만든다. 미완 작업이 남아있다면 close 키워드 보류하고 Draft MR.
 
-**적용 위치:** MR description의 `## Summary` 위 또는 첫 줄. finalize 스킬 호출 시 `glab mr create --description` / `gh pr create --body` 본문 최상단에 삽입.
+**적용 위치:** MR description의 `## Summary` 위 또는 첫 줄. submit-mr 스킬의 `glab mr create --description` / `gh pr create --body` 본문 최상단에 삽입.
 
 예시:
 ```markdown
@@ -342,7 +347,8 @@ Closes #81
 | 베이스 브랜치(`dev`)에서 직접 커밋 | 절대 금지. 항상 ① 단계로 worktree+피처 브랜치 만들고 그 안에서 커밋. |
 | MR 머지 전 worktree 삭제 | 머지 + 원격 브랜치 정리 후에만 `git worktree remove` 실행 |
 | 스펙 없이 구현 시작 | ④⑤ 완료 후 구현 |
-| finalize 없이 작업 종료 | ⑫은 항상 수행 |
-| 문서 최신화 없이 finalize 실행 | ⑫-a 점검 후 ⑫-b finalize 진행 |
+| ⑫ 마무리 없이 작업 종료 | ⑫은 항상 수행 |
+| 문서 최신화 없이 MR 제출 | ⑫-a 점검 후 ⑫-b submit-mr 진행 |
+| base 선병합 없이 MR 생성 | MR 전에 `origin/{base}` 를 병합하고 게이트를 다시 돌린다 (⑫-b) |
 | 다이어그램/스펙이 구현과 불일치 | 구현 기준으로 문서를 먼저 업데이트 |
 | 이슈 컨텍스트로 시작했는데 MR/PR에 `Closes #N` 누락 | 즉시 description 수정. 약한 표현(`Refs`, `Related`)으로 대체 금지. ⑫-b 항상 close 키워드 포함. |

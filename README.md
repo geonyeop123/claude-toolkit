@@ -28,8 +28,8 @@ claude plugin uninstall dev-workflow@claude-toolkit
 |------|----------------|------|
 | **superpowers 플러그인** | `feature-workflow`, `check-plugin-compat`, `codex-subagent-driven-development` | superpowers marketplace 설치 |
 | **openai-codex 플러그인 + codex CLI** | `codex-code-review`, `codex-spec-review`, `codex-subagent-driven-development` | codex 플러그인 설치 + 로컬 codex CLI |
-| **gh CLI** (GitHub) | `finalize`, `issue` | `gh auth login` |
-| **glab CLI** (GitLab) | `finalize`, `issue` | GitLab 사용 시 |
+| **gh CLI** (GitHub) | `finalize`, `submit-mr`, `issue` | `gh auth login` |
+| **glab CLI** (GitLab) | `finalize`, `submit-mr`, `issue` | GitLab 사용 시 |
 
 ## 포함된 스킬 (10)
 
@@ -44,6 +44,7 @@ claude plugin uninstall dev-workflow@claude-toolkit
 | `codex-subagent-driven-development` | codex를 implementer로 두고 task 단위 구현 + Claude 리뷰 |
 | `issue` | GitHub/GitLab 이슈 등록(host 자동 감지, 부모/자식 분할) |
 | `finalize` | 문서 최신화 + 커밋 + PR/MR 생성(gh/glab 자동 선택) |
+| `submit-mr` | PR/MR 전 `origin/{base}` 선병합 → 충돌·파생 파일 해소 → 게이트 재실행 → push → PR/MR 생성 → 머지 가능 확인. feature-workflow ⑫-b 가 호출. 프로젝트 `.claude/skills/submit-mr/` 우선 |
 | `check-plugin-compat` | superpowers 플러그인 업데이트 후 커스텀 스킬 호환성 검증 |
 
 ## 포함된 에이전트 (2)
