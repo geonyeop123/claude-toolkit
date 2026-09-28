@@ -28,9 +28,16 @@ base 를 되병합하고, 파이프라인이 다시 돈다. 이 스킬은 그 �
 
 ## 1. 작업 트리 정리
 
-문서 최신화(⑫-a) 산출물까지 **전부 커밋한 상태**에서 시작한다. `git status --short` 가 비어 있지 않으면
-병합하지 않는다 — 병합이 거부되거나, 충돌 해소와 작업 변경이 한 커밋에 섞인다. 커밋 메시지는 프로젝트
-규약(없으면 Conventional Commits)을 따른다.
+문서 최신화(⑫-a) 산출물은 보통 미커밋 상태로 도착한다. **먼저 전부 커밋한다.**
+
+```bash
+git status --short          # 의도하지 않은 파일은 넣지 않는다
+git add <파일…>
+git commit -m "<프로젝트 규약의 메시지>"   # 없으면 Conventional Commits
+git status --short          # 비어 있어야 2 절로 간다
+```
+
+작업 트리가 비어 있지 않으면 병합하지 않는다 — 병합이 거부되거나, 충돌 해소와 작업 변경이 한 커밋에 섞인다.
 
 ## 2. origin 최신화
 
@@ -44,7 +51,7 @@ git fetch origin
 ## 3. {base} 선병합
 
 ```bash
-git merge --no-ff origin/{base}
+git merge --no-ff --no-edit origin/{base}
 ```
 
 - **rebase 가 아니라 merge 다.** push 한 브랜치를 rebase 하면 force push 가 필요하다. 프로젝트가 rebase 를
@@ -63,7 +70,7 @@ git merge --no-ff origin/{base}
 | 목록·색인·이력 문서 | 양쪽 행을 모두 살린다. 프로젝트가 그 파일을 폐지했으면(스텁·README 안내) 안내대로 옮긴다 |
 | 코드 | 양쪽 의도를 확인해 해소하고 해당 모듈 테스트를 돌린다. 모르면 추측하지 말고 사용자에게 묻는다 |
 
-해소 뒤 `git add` → `git commit` 으로 병합 커밋을 완성한다.
+해소 뒤 `git add` → `git commit --no-edit` 으로 병합 커밋을 완성한다(`--no-edit` 가 없으면 에디터가 열려 에이전트 셸에서 멈춘다).
 
 ## 5. 게이트 재실행
 
@@ -84,11 +91,11 @@ git push -u origin {branch}
 
 ```bash
 # GitHub
-gh pr list --head {branch} --state open        # 이미 있으면 생성하지 않는다
+gh pr list --head {branch} --base {base} --state open   # 이미 있으면 생성하지 않는다
 gh pr create --base {base} --head {branch} --title "<제목>" --body-file <본문 파일> [--draft]
 # GitLab
-glab mr list --source-branch {branch}
-glab mr create --target-branch {base} --source-branch {branch} --title "<제목>" --description "<본문>" [--draft]
+glab mr list --source-branch {branch} --target-branch {base}
+glab mr create --target-branch {base} --source-branch {branch} --title "<제목>" --description "<본문>" --yes [--draft]
 ```
 
 - **이슈 close 필수:** 이슈 컨텍스트면 본문 첫 줄 `Closes #N`. `Refs`·`Related` 로 대체하지 않는다.
