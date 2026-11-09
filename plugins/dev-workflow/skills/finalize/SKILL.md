@@ -1,11 +1,11 @@
 ---
 name: finalize
-description: 작업 마무리 - 문서 최신화, 커밋, PR/MR 작성을 한 번에 진행합니다. GitHub은 PR(gh), GitLab은 MR(glab)을 자동 선택합니다. 코드 변경 후 마무리 단계에서 사용하세요.
+description: 작업 마무리 - 문서 최신화, 커밋, 이해문서(explain-pr), PR/MR 작성을 한 번에 진행합니다. GitHub은 PR(gh), GitLab은 MR(glab)을 자동 선택합니다. 코드 변경 후 마무리 단계에서 사용하세요.
 ---
 
 # Finalize - 작업 마무리
 
-작업 완료 후 문서 최신화, 커밋, PR/MR 작성을 진행합니다.
+작업 완료 후 문서 최신화, 커밋, 이해문서 작성, PR/MR 작성을 진행합니다.
 
 ## 진행 순서
 
@@ -38,30 +38,15 @@ description: 작업 마무리 - 문서 최신화, 커밋, PR/MR 작성을 한 �
 
 | 변경 유형 | 업데이트 대상 |
 |----------|------------|
-| 신규 API 추가 / 엔드포인트 변경 | `README.md` — API 엔드포인트 목록 반영 |
-| Controller 추가/수정 | `docs/progress/{app}.md` — 해당 엔드포인트 상태 반영 + `docs/progress/README.md` 진행률 갱신 |
 | 아키텍처 / 모듈 구조 변경 | `.ai/architecture/` 해당 문서 반영 |
 | 기술 부채 해소 또는 추가 | `docs/tech-debt.md` 반영 |
 | Flyway migration 추가 | `.ai/diagrams/erd.md` ERD 반영 |
 | Entity 상태 enum 추가/변경 | `.ai/diagrams/{domain}.md` 상태 전이 다이어그램 반영 |
 | 위 항목에 해당하지 않는 변경 | 문서 업데이트 생략 |
 
-#### Progress 업데이트 규칙 (`docs/progress/`)
-
-`docs/progress/` 디렉토리가 존재하는 경우에만 수행한다.
-
-1. 변경된 Controller 파일에서 엔드포인트 목록을 추출한다
-2. `docs/progress/{app}.md`에서 해당 엔드포인트의 상태를 ✅로 변경하고, 비고란을 갱신한다
-3. 엔드포인트가 문서에 없으면 가장 적합한 섹션에 행을 추가한다
-4. 엔드포인트 URL이나 HTTP 메서드가 기존 문서와 다르면 실제 코드 기준으로 수정한다
-5. 각 섹션의 완료/전체 카운트를 재계산한다
-6. `docs/progress/README.md`의 전체 진행률 테이블을 재계산한다
-7. 마지막 업데이트 날짜를 오늘로 변경한다
-
 #### 주의
 - `.ai/architecture/` 파일들은 아키텍처 결정이 실제로 변경되었을 때만 수정한다
 - 존재하지 않는 파일(`docs/tech-debt.md` 등)은 필요 시 새로 생성한다
-- `docs/progress/` 디렉토리가 없으면 progress 업데이트를 생략한다
 
 ### 4. 커밋 작성
 - 프로젝트 Git Conventions 준수:
@@ -70,11 +55,20 @@ description: 작업 마무리 - 문서 최신화, 커밋, PR/MR 작성을 한 �
   - Co-Author 라인 없음
   - 본문은 bullet points
 
-### 5. Push 및 PR/MR 작성
+### 5. 이해문서 작성 (explain-pr)
+
+`explain-pr` 스킬이 사용 가능할 때만 수행한다(프로젝트 `.claude/skills/explain-pr/` 또는 스킬 목록에 존재). 없으면 이 단계를 생략한다.
+
+1. 4단계 커밋 후 `explain-pr` 스킬을 **warm 모드**로 호출한다 — 이 세션에서 방금 수행한 작업이므로 "왜 / 버린 대안 / 실패한 시도 / 함정"을 세션 문맥에서 직접 채운다.
+2. 산출물(`docs/work/<slug>/understanding.md`, 폴더 README 등)을 별도 커밋한다 (`docs: <기능> 이해문서 추가`).
+3. 그 커밋의 SHA(`git rev-parse HEAD`)로 이해문서 퍼머링크(호스트 포함 절대 URL)를 만들고, explain-pr이 정한 `## 개발자 이해문서` 블록을 PR/MR 본문 **최상단**에 넣을 준비를 한다. 링크 형식·검증은 explain-pr 스킬 규칙을 따른다.
+4. PR/MR이 이미 존재하면 6단계 push **후에** `gh pr edit <n> --body-file` / `glab mr update <n> --description`으로 블록을 주입한다.
+
+### 6. Push 및 PR/MR 작성
 - `git push -u origin <branch>` 실행
-- 플랫폼에 따라 PR/MR 생성 (아래 참고)
+- 플랫폼에 따라 PR/MR 생성 (아래 참고) — 5단계를 수행했다면 본문 최상단에 이해문서 블록 포함
 - base branch: `dev` (이 프로젝트의 기본값 — `main`으로 직접 MR 금지)
-- PR/MR이 이미 존재하면 스킵
+- PR/MR이 이미 존재하면 생성은 스킵하고, 5단계를 수행했다면 본문에 이해문서 블록만 주입
 - push 권한 오류 시 사용자에게 수동 push 안내
 
 #### GitHub (gh)
@@ -99,6 +93,11 @@ glab mr create --target-branch <base-branch> --title "..." --description "..."
 ## PR/MR 본문 형식
 
 ```markdown
+## 개발자 이해문서        ← explain-pr 수행 시에만
+<요약 3줄>
+
+📄 **[개발자 이해문서 전문 보기 →](<커밋 SHA 퍼머링크>)**
+
 ## Summary
 - 변경 사항 요약
 
@@ -119,16 +118,16 @@ glab mr create --target-branch <base-branch> --title "..." --description "..."
 3. CLAUDE.md 확인 → 문서 업데이트 규칙 파악
 4. .ai/ 디렉토리 탐색 → 존재하는 문서 목록 파악
 5. 변경 유형 판단 → 업데이트 대상 문서 결정 및 반영
-   - 신규 API → README.md 업데이트
    - 아키텍처 변경 → .ai/architecture/ 해당 문서 업데이트
    - 기술 부채 변경 → docs/tech-debt.md 업데이트
 6. git add (제외 파일 제외)
 7. git commit
-8. git push -u origin <current-branch>
-9. [GitHub] gh pr create --base <base-branch>
+8. [explain-pr 있을 때] 이해문서 warm 작성 → 커밋 → HEAD SHA로 퍼머링크 생성
+9. git push -u origin <current-branch>
+10. [GitHub] gh pr create --base <base-branch>
    [GitLab] glab mr create --target-branch <base-branch>
-   (PR/MR 없을 시에만 생성)
-10. PR/MR URL 반환
+   (PR/MR 없을 시에만 생성, 본문 최상단에 이해문서 블록 / 이미 있으면 본문에 주입)
+11. PR/MR URL 반환
 ```
 
 ## 사용 예시
